@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "905883475961",
+    "firebase_url": "https://sedal-miracle-49697-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "sedal-miracle-49697",
+    "storage_bucket": "sedal-miracle-49697.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:905883475961:android:2382cc7c25301665066728",
+        "android_client_info": {
+          "package_name": "com.sedalmiracle.sedal_miracle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGCsF9BY1OMe4UYNWH5p73vtvhjjvAy9I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
