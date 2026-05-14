@@ -19,8 +19,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   // 3개 시간대 데이터 (기본값)
   final Map<String, ScheduleSlot> _slots = {
     'morning': ScheduleSlot(time: '08:00', enabled: true, medications: []),
-    'afternoon': ScheduleSlot(time: '12:00', enabled: true, medications: []),
-    'evening': ScheduleSlot(time: '18:00', enabled: true, medications: []),
+    'lunch': ScheduleSlot(time: '12:00', enabled: true, medications: []),
+    'dinner': ScheduleSlot(time: '18:00', enabled: true, medications: []),
   };
 
   bool _loading = true;
@@ -35,8 +35,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _loading = false;
       return;
     }
+    // 설계서에 맞춰 schedules/{deviceId} 경로로 수정
     _ref = FirebaseDatabase.instance.ref(
-      'schedules/${_user.uid}/$kDeviceId',
+      'schedules/$kDeviceId',
     );
     _loadSchedule();
   }
@@ -46,7 +47,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       final snapshot = await _ref.get();
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
-        for (final slotName in ['morning', 'afternoon', 'evening']) {
+        for (final slotName in ['morning', 'lunch', 'dinner']) {
           if (data[slotName] != null) {
             _slots[slotName] = ScheduleSlot.fromMap(
               Map<String, dynamic>.from(data[slotName] as Map),
@@ -277,9 +278,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                   _buildScheduleCard('morning', '🌅 아침', Colors.orange),
                   const SizedBox(height: 16),
-                  _buildScheduleCard('afternoon', '🌞 점심', Colors.amber.shade700),
+                  _buildScheduleCard('lunch', '🌞 점심', Colors.amber.shade700),
                   const SizedBox(height: 16),
-                  _buildScheduleCard('evening', '🌙 저녁', Colors.indigo),
+                  _buildScheduleCard('dinner', '🌙 저녁', Colors.indigo),
                   const SizedBox(height: 32),
                 ],
               ),
