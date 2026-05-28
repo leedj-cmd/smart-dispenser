@@ -11,8 +11,8 @@
 #include <FirebaseESP32.h>
 
 // -- Wi-Fi
-#define WIFI_SSID      "leedj"
-#define WIFI_PASSWORD  "dlehdwpqlqjs"
+#define WIFI_SSID      "🤮🤮(2)"
+#define WIFI_PASSWORD  "123456789a"
 
 // -- Firebase
 #define DATABASE_URL    "https://sedal-miracle-49697-default-rtdb.asia-southeast1.firebasedatabase.app/"
