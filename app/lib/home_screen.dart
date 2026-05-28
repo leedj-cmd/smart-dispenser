@@ -3,13 +3,56 @@ import 'package:flutter/material.dart';
 import 'auth_service.dart';
 import 'schedule_screen.dart';
 
+const String kDeviceId = 'device_001';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  String _formatDate(DateTime dt) {
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final weekday = weekdays[dt.weekday - 1];
+    return '${dt.year}년 ${dt.month}월 ${dt.day}일 ${weekday}요일';
+  }
+
+  Future<void> _dispense(BuildContext context, String slot) async {
+    try {
+      await FirebaseDatabase.instance
+          .ref('dispense/$kDeviceId/command')
+          .set(slot);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_slotLabel(slot)} 배출 명령 전송됨'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  String _slotLabel(String slot) {
+    switch (slot) {
+      case 'morning':
+        return '🌅 아침';
+      case 'lunch':
+        return '🌞 점심';
+      case 'dinner':
+        return '🌙 저녁';
+      default:
+        return slot;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
     final user = authService.currentUser;
+    final today = DateTime.now();
 
     return Scaffold(
       appBar: AppBar(
@@ -20,7 +63,6 @@ class HomeScreen extends StatelessWidget {
             tooltip: '로그아웃',
             onPressed: () async {
               await authService.signOut();
-              // StreamBuilder가 자동으로 LoginScreen으로 전환함
             },
           ),
         ],
@@ -30,7 +72,19 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 환영 메시지 (이름은 RTDB에서 실시간으로)
+            // 날짜 + 요일
+            Center(
+              child: Text(
+                _formatDate(today),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 환영 메시지
             if (user != null)
               StreamBuilder<DatabaseEvent>(
                 stream: FirebaseDatabase.instance
@@ -75,14 +129,39 @@ class HomeScreen extends StatelessWidget {
               ),
             const SizedBox(height: 24),
 
-            // 메뉴 섹션
+            // 즉시 배출 버튼
+            const Text(
+              '즉시 배출',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDispenseButton(
+                    context, 'morning', '🌅', '아침', Colors.orange),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDispenseButton(
+                    context, 'lunch', '🌞', '점심', Colors.amber.shade700),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDispenseButton(
+                    context, 'dinner', '🌙', '저녁', Colors.indigo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // 관리 메뉴
             const Text(
               '관리',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
-            // 약 복용 스케줄 카드 (★ 메인 기능)
             _buildMenuCard(
               context: context,
               icon: Icons.schedule,
@@ -95,7 +174,6 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 복용 기록 (추후 구현)
             _buildMenuCard(
               context: context,
               icon: Icons.history,
@@ -111,7 +189,6 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 디바이스 설정 (추후 구현)
             _buildMenuCard(
               context: context,
               icon: Icons.devices,
@@ -127,7 +204,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // 디버그용: RTDB 데이터 확인
+            // 개발자 도구
             ExpansionTile(
               title: const Text(
                 '🔧 개발자 도구',
@@ -175,6 +252,36 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDispenseButton(
+    BuildContext context,
+    String slot,
+    String emoji,
+    String label,
+    Color color,
+  ) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 3,
+      ),
+      onPressed: () => _dispense(context, slot),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
@@ -231,8 +338,9 @@ class HomeScreen extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color:
-                            enabled ? Colors.grey.shade700 : Colors.grey.shade500,
+                        color: enabled
+                            ? Colors.grey.shade700
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ],
