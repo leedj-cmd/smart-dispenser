@@ -11,7 +11,7 @@
 #include <FirebaseESP32.h>
 
 // -- Wi-Fi
-#define WIFI_SSID      "🤮🤮(2)"
+#define WIFI_SSID      "🤮🤮 (2)"
 #define WIFI_PASSWORD  "123456789a"
 
 // -- Firebase
