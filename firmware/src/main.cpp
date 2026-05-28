@@ -54,6 +54,9 @@
 // -- 미복용 타임아웃
 #define MISSED_TIMEOUT  (10UL * 60UL * 1000UL)
 
+// -- 수동 배출 명령 폴링 간격
+#define COMMAND_CHECK_INTERVAL 2000UL
+
 // -- 상태 머신
 enum State { STANDBY, ALARM, TAKEN };
 State currentState = STANDBY;
@@ -89,6 +92,9 @@ unsigned long dispenseTime = 0;
 bool          irReady      = false;
 int           activeSlot   = -1;
 unsigned long alarmStart   = 0;
+
+// -- 수동 배출 타이머
+unsigned long lastCommandCheck = 0;
 
 // -- Firebase / RTC / LCD
 FirebaseData   fbData;
@@ -201,6 +207,40 @@ void dispenseMedicine(int slot) {
   buzzerOn();
   digitalWrite(LED_PIN, HIGH);
   Serial.println("[DISPENSE] 완료 -> ALARM");
+}
+
+// ============================================================
+//  수동 배출 명령 확인 (앱 버튼 → Firebase → 즉시 실행)
+// ============================================================
+
+void checkManualDispense() {
+  String path = String("/dispense/") + DEVICE_ID + "/command";
+  if (!Firebase.getString(fbData, path)) return;
+
+  String cmd = fbData.stringData();
+  cmd.trim();
+  if (cmd.length() == 0) return;
+
+  // 중복 실행 방지: 읽자마자 명령 초기화
+  Firebase.setString(fbData, path, "");
+
+  int slot = -1;
+  if (cmd == "morning")      slot = 0;
+  else if (cmd == "lunch")   slot = 1;
+  else if (cmd == "dinner")  slot = 2;
+
+  if (slot < 0) {
+    Serial.printf("[MANUAL] 알 수 없는 명령: %s\n", cmd.c_str());
+    return;
+  }
+
+  if (currentState != STANDBY) {
+    Serial.printf("[MANUAL] 이미 동작 중 (%d) - 명령 무시\n", currentState);
+    return;
+  }
+
+  Serial.printf("[MANUAL] %s 즉시 배출\n", slotNames[slot]);
+  dispenseMedicine(slot);
 }
 
 // ============================================================
@@ -335,7 +375,7 @@ void loop() {
     }
   }
 
-  // 매 분 스케줄 체크
+  // 매 분 스케줄 체크 (시간 기반 자동 배출)
   static int lastMinute = -1;
   if (now.second() == 0 && now.minute() != lastMinute) {
     lastMinute = now.minute();
@@ -346,6 +386,12 @@ void loop() {
         break;
       }
     }
+  }
+
+  // 수동 배출 명령 폴링 (앱 버튼)
+  if (millis() - lastCommandCheck >= COMMAND_CHECK_INTERVAL) {
+    lastCommandCheck = millis();
+    checkManualDispense();
   }
 
   // 자정 리셋
