@@ -1,0 +1,27 @@
+- generic [ref=e5]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - heading "세달의 기적" [active] [level=2]
+              - button "로그아웃" [ref=e24]
+            - group:
+              - generic:
+                - generic: 2026년 6월 4일 목요일
+              - generic:
+                - generic: 안녕하세요, 보호자님 👋
+              - generic:
+                - generic: test001@sedal.test
+              - generic:
+                - generic: 즉시 배출
+              - button "🌅 아침" [ref=e25]
+              - button "🌞 점심" [ref=e26]
+              - button "🌙 저녁" [ref=e27]
+              - generic:
+                - generic: 관리
+              - button "약 복용 스케줄 아침/점심/저녁 복용 시간과 약 설정" [ref=e28]
+              - button "복용 기록 어르신의 복용 이력 확인 (개발 예정)" [ref=e29]
+              - button "디스펜서 설정 디바이스 연결 및 정보 (개발 예정)" [ref=e30]
+              - button "🔧 개발자 도구" [ref=e31]

@@ -1,0 +1,20 @@
+- generic [ref=e5] [cursor=pointer]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - button "Back" [ref=e12]
+              - heading "회원가입" [level=2]
+            - group:
+              - generic:
+                - textbox "이름 (보호자)" [ref=e14]: 테스트
+                - textbox "이메일" [ref=e16]: test001@sedal.test
+                - textbox "비밀번호" [ref=e18]: test1234
+                - generic [ref=e19]:
+                  - textbox "비밀번호 확인" [ref=e20]
+                  - generic:
+                    - generic: 비밀번호를 한 번 더 입력해주세요
+                - button "회원가입" [active] [ref=e21]
+                - button "이미 계정이 있으신가요? 로그인" [ref=e22]
