@@ -4,9 +4,80 @@
 **팀**: 세달의 기적  
 **문서 목적**: 보호자 앱(Flutter)과 ESP32 펌웨어 간 Firebase를 통한 데이터 교환 명세
 
+> ⚠️ **구현 현황 (2026-06 기준)**: 아래 1~9장은 V1 설계 초안(ESP32가 Wi-Fi로
+> Firebase에 직접 연결)입니다. **실제 구현은 0장의 시리얼 브리지 방식으로
+> 변경되었습니다.** 스키마/통신 경로는 0장을 우선 참고하세요.
+
 ---
 
-## 1. 사용할 Firebase 서비스
+## 0. 실제 구현 (As-Built) — 시리얼 브리지 방식
+
+ESP32가 Wi-Fi/Firebase에 직접 붙지 않습니다. 호스트(Mac)에서 도는 `bridge.py`가
+중계합니다.
+
+```
+Flutter 앱 ⇄ Firebase RTDB (asia-southeast1)
+                   ⇅  REST poll (cmd 1s / sched 30s)
+            bridge.py (firmware/bridge/bridge.py)
+                   ⇅  USB Serial 115200
+            ESP32 펌웨어 (firmware/src/main.cpp)
+```
+
+- **변경 이유**: ESP32용 Firebase 직결 라이브러리 대신, 호스트 브리지로 단순화·안정화.
+- **디바이스 ID**: `device_001` 하드코딩 (MAC 기반 `dispenser-XXXXXX` 미적용).
+- **프로젝트**: `sedal-miracle-49697`, RTDB region `asia-southeast1`.
+
+### 0.1 실제 RTDB 트리
+
+```jsonc
+{
+  "users": { "{uid}": { "name": "...", "email": "..." } },
+
+  "schedules": {
+    "device_001": {
+      "morning": {
+        "time": "08:00",
+        "enabled": true,
+        "medications": [ { "name": "혈압약", "count": 2 } ],  // 배열 (pillCount/medicineName 대체)
+        "dispensed": true,   // 디바이스 → 배출 완료
+        "taken": true,       // 디바이스 → IR 복용 감지
+        "missed": false      // 디바이스 → 미복용 타임아웃
+      },
+      "lunch":  { "...": "..." },
+      "dinner": { "...": "..." },
+      "updatedAt": 1715731200000
+    }
+  },
+
+  "dispense": {
+    "device_001": { "command": "morning" }  // 앱 즉시 배출 요청 → 브리지가 읽고 ""로 클리어
+  }
+}
+```
+
+| 쓰기 주체 | 경로 | 비고 |
+|---|---|---|
+| 앱 | `users/{uid}` | name, email |
+| 앱 | `schedules/{deviceId}/{slot}` | time, enabled, medications[] |
+| 앱 | `dispense/{deviceId}/command` | slot 문자열 (즉시 배출) |
+| 브리지 | `schedules/{deviceId}/{slot}/{dispensed,taken,missed}` | 디바이스 이벤트 반영 |
+| 브리지 | `dispense/{deviceId}/command` | 처리 후 `""` 클리어 |
+
+> `devices/`, `history/`, `notifications/` 노드는 V1 설계에만 있고 아직 미구현.
+> 복용 이력은 현재 `schedules/{slot}` 의 플래그로만 표현됨.
+
+### 0.2 시리얼 프로토콜 (브리지 ⇄ ESP32)
+
+**호스트 → ESP32**: `TIME <ISO8601>` · `SCHED <slot> HH:MM <0|1>` ·
+`DISPENSE <slot>` · `PING`
+**ESP32 → 호스트**: `EVT DISPENSED|TAKEN|MISSED <slot>` · `LOG ...` · `PONG` · `READY`
+
+브리지: 시작 시 `TIME` 동기화 + 전체 `SCHED` 푸시, 이후 `dispense/command` 1초 폴링,
+`schedules` 30초 폴링. ESP32 미복용 타임아웃 10분, 자정 `dispensed` 리셋.
+
+---
+
+## 1. 사용할 Firebase 서비스 (V1 초안 — 일부 미구현)
 
 | 서비스 | 용도 | 비용 |
 |---|---|---|
@@ -318,6 +389,6 @@ Firebase.RTDB.setJSON(&fbdo, "/history/dispenser-001/2026-04-24/morning_001", &h
 
 ---
 
-**문서 버전**: V1 (2026-04-24)  
+**문서 버전**: V2 (2026-06-08) — 0장에 시리얼 브리지 실제 구현 반영, 1~9장은 V1 초안 유지  
 **작성**: Claude (멘토)  
 **검토 요청**: 봉준표 (팀장), 이동제 (펌웨어)
