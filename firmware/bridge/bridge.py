@@ -135,6 +135,12 @@ def main():
                     cmd = cmd.strip()
                     if cmd in SLOTS:
                         send(ser, f"DISPENSE {cmd}")
+                    elif cmd.upper() in ("HOME", "PING", "LCDRST"):
+                        send(ser, cmd.upper())
+                    elif cmd.upper().startswith(("JOG ", "SETPOS ", "SLOT ")):
+                        send(ser, cmd.upper())
+                    elif cmd.startswith("LCD "):
+                        send(ser, cmd)   # keep case for LCD text
                     else:
                         print(f"[poll cmd] unknown: {cmd!r}")
                     try:

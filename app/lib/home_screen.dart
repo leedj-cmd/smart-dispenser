@@ -15,14 +15,23 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _dispense(BuildContext context, String slot) async {
+    await _sendCommand(context, slot, '${_slotLabel(slot)} 배출 명령 전송됨');
+  }
+
+  Future<void> _home(BuildContext context) async {
+    await _sendCommand(context, 'HOME', '🏠 0° 이동 명령 전송됨');
+  }
+
+  Future<void> _sendCommand(
+      BuildContext context, String command, String successMsg) async {
     try {
       await FirebaseDatabase.instance
           .ref('dispense/$kDeviceId/command')
-          .set(slot);
+          .set(command);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_slotLabel(slot)} 배출 명령 전송됨'),
+          content: Text(successMsg),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
@@ -152,6 +161,22 @@ class HomeScreen extends StatelessWidget {
                     context, 'dinner', '🌙', '저녁', Colors.indigo),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(color: Colors.deepPurple.shade300),
+                foregroundColor: Colors.deepPurple,
+              ),
+              onPressed: () => _home(context),
+              icon: const Text('🏠', style: TextStyle(fontSize: 20)),
+              label: const Text(
+                '0°로 이동 (HOME)',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 24),
 
