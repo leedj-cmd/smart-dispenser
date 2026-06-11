@@ -63,6 +63,14 @@ bool          irReady      = false;
 int           activeSlot   = -1;
 unsigned long alarmStart   = 0;
 
+// 알람 비프: 3회 울리고 정지 (300ms on / 300ms off)
+#define BEEP_COUNT   3
+#define BEEP_ON_MS   300
+#define BEEP_OFF_MS  300
+int           beepsLeft    = 0;
+bool          buzzing      = false;
+unsigned long beepToggleAt = 0;
+
 RTC_DS3231        rtc;
 LiquidCrystal_I2C* lcd = nullptr;
 uint8_t           lcdAddr = 0x00;
@@ -115,8 +123,28 @@ void buzzerOff() {
 }
 
 void stopAlarm() {
+  beepsLeft = 0;
+  buzzing   = false;
   buzzerOff();
   digitalWrite(LED_PIN, LOW);
+}
+
+// loop()에서 매 주기 호출: 비프 패턴 진행
+void updateBeep() {
+  if (beepsLeft <= 0) return;
+  unsigned long t = millis();
+  if (!buzzing) {
+    if (t >= beepToggleAt) {
+      buzzerOn();
+      buzzing = true;
+      beepToggleAt = t + BEEP_ON_MS;
+    }
+  } else if (t >= beepToggleAt) {
+    buzzerOff();
+    buzzing = false;
+    beepsLeft--;
+    beepToggleAt = t + BEEP_OFF_MS;
+  }
 }
 
 // ============================================================
@@ -132,7 +160,9 @@ void dispenseMedicine(int meal) {
   activeSlot   = meal;
   alarmStart   = millis();
   currentState = ALARM;
-  buzzerOn();
+  beepsLeft    = BEEP_COUNT;
+  buzzing      = false;
+  beepToggleAt = millis();
   digitalWrite(LED_PIN, HIGH);
 }
 
@@ -140,10 +170,21 @@ void dispenseMedicine(int meal) {
 //  LCD
 // ============================================================
 
+// 5초마다 강제 재갱신: 노이즈로 깨진 화면 자동 복구 + 스케줄 변경 반영
+#define LCD_REFRESH_MS 5000
+unsigned long lastLcdDraw = 0;
+
 void updateLCD() {
-  if (currentState == prevState) return;
-  prevState = currentState;
+  bool changed = (currentState != prevState);
+  if (!changed && (millis() - lastLcdDraw) < LCD_REFRESH_MS) return;
+  prevState   = currentState;
+  lastLcdDraw = millis();
   if (!lcd) return;
+  (void)changed;
+  // 노이즈로 4비트 니블 동기가 깨지면 글자 깨짐/화면 꺼짐 발생
+  // → 매 갱신마다 풀 재초기화로 복구
+  lcd->init();
+  lcd->backlight();
   lcd->clear();
   if (currentState == STANDBY) {
     lcd->setCursor(0, 0);
@@ -348,7 +389,11 @@ void setup() {
   pinMode(IR_PIN, INPUT);
 
   Wire.begin(21, 22);
+<<<<<<< Updated upstream
   Wire.setClock(50000);   // 50 kHz - 신호 안정화 (배선/풀업 마진 확보)
+=======
+  Wire.setClock(50000);  // 3.3V→5V 레벨 마진 확보용 저속 I2C (10kHz는 RTC 타임아웃 발생)
+>>>>>>> Stashed changes
 
   if (!rtc.begin()) {
     Serial.println("LOG rtc init fail");
@@ -372,7 +417,9 @@ void setup() {
   } else {
     Serial.printf("LOG LCD bound at 0x%02X\n", lcdAddr);
     lcd = new LiquidCrystal_I2C(lcdAddr, 16, 2);
+    delay(100);
     lcd->init();
+    lcd->init();   // 마지널 신호 환경 대비 이중 초기화
     lcd->backlight();
     lcd->setCursor(0, 0);
     lcd->print("Initializing...");
@@ -390,8 +437,11 @@ void setup() {
 
 void loop() {
   pollSerial();
+  updateBeep();
 
   DateTime now = rtc.now();
+  // I2C 글리치로 읽기 실패 시 잘못된 시간(2000-01-01 등) 무시
+  if (now.year() < 2024) { delay(100); return; }
   String nowTime = String(now.hour() < 10 ? "0" : "") + now.hour()
                  + ":" + (now.minute() < 10 ? "0" : "") + now.minute();
 
